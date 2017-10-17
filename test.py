@@ -4,7 +4,6 @@ a = np.array(([1, 0, -1], [2, 3, 0]))
 b = np.zeros(a.shape)
 b[a > 0] = a[a > 0]
 c = np.array(a)
-d = [0, 3]
+d = [1] * 5
 d.append(a)
-for i in range(len(d))[::-1]:
-    print d[i]
+print a, b, np.dot(a.T, b)

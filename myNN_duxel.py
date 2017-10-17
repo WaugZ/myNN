@@ -11,9 +11,9 @@ class myNN:
         self.W = [0]  # not use W[0]
         self.b = [0]  # not use b[0]
         ''' Make as many layers as you like '''
-        w = np.random.rand(3, self.m) * .01
+        w = np.random.rand(1, self.m) * .01
         self.W.append(w)
-        b = np.zeros((3, 1))
+        b = np.zeros((1, 1))
         self.b.append(b)
 
 
@@ -30,16 +30,18 @@ class myNN:
     def train(self, train_data, labels, max_iter):
         for i in range(max_iter):
             ''' Forward prop '''
-            # print self.W1.shape, train_data.shape
+            # print self.W[1].shape, train_data.shape
             Z = [0]  #  not use Z[0]
             A = [train_data]
-            for ind in range(len(self.W) - 2):  # the active function of last  layer is different
-                z = self.W[ind + 1] * A[ind] + self.b[ind + 1]
+            for ind in range(len(self.W) - 1):  # the active function of last  layer is different
+                z = np.dot(self.W[ind + 1], A[ind]) + self.b[ind + 1]
                 a = self.reLU(z)
                 A.append(a)
                 Z.append(z)
 
-            z_last = self.W[-1:] * A[-1:] + self.b[-1:]
+            # print self.W[1].shape, A[0].shape
+            z_last = np.dot(self.W[len(self.W) - 1], A[len(A) - 2]) + self.b[len(self.b) - 1]
+            # print z_last.shape
             a_last = self.sigmoid(z_last)
             Z.append(z_last)
             A.append(a_last)
@@ -49,63 +51,56 @@ class myNN:
             print('Iteration ' + str(i) + ' cost = ' + str(J))
 
             ''' Backward prop '''
-            dZ = []
-            dW = []
-            dB = []
-            g = []
-            for ind in range(len(A))[::-1] :
+            dZ = [labels - a_last] * len(Z)
+            dW = [0] * len(self.W)
+            dB = [0] * len(self.b)
+            g = [0] * len(Z)
+            for ind in range(len(A) - 1)[::-1]:
+                # print ind
+                if ind < 1:
+                    break
+                # print dZ[ind].shape
+                dW[ind] = np.dot(dZ[ind], A[ind - 1].T) / self.m
+                dB[ind] = np.sum(dZ[ind], axis=1) / self.m
+                # print dB[ind].shape
+                g[ind - 1] = np.zeros(A[ind - 1].shape)
+                g[ind - 1][A[ind - 1] != 0] = 1
+                dZ[ind - 1] = np.multiply(self.W[ind].T * dZ[ind], g[ind - 1])
 
-            dZ4 = labels - A4
-            dW4 = dZ4 * A3.T / m
-            db4 = np.sum(dZ4, axis=1, keepdims=True) / self.m
-            g3 = np.zeros(A3.shape)
-            g3[A3 != 0] = 1
-            dZ3 = np.multiply(self.W4.T * dZ4, g3)
-            dW3 = dZ3 * A2.T / m
-            db3 = np.sum(dZ3, axis=1, keepdims=True) / self.m
-            g2 = np.zeros(A2.shape)
-            g2[A2 != 0] = 1
-            dZ2 = np.multiply(self.W3.T * dZ3, g2)
-            dW2 = dZ2 * A1.T / m
-            db2 = np.sum(dZ2, axis=1, keepdims=True) / self.m
-            g1 = np.zeros(A1.shape)
-            g1[A1 != 0] = 1
-            dZ1 = np.multiply(self.W2.T * dZ2, g1)
-            dW1 = dZ1 * train_data.T / m                    # train_data is A0
-            db1 = np.sum(dZ1, axis=1, keepdims=True) / self.m
 
             ''' Gradient descent '''
-            self.W1 = self.W1 + self.lr * dW1
-            self.b1 = self.b1 + self.lr * db1
-            self.W2 = self.W2 + self.lr * dW2
-            self.b2 = self.b2 + self.lr * db2
-            self.W3 = self.W3 + self.lr * dW3
-            self.b3 = self.b3 + self.lr * db3
-            self.W4 = self.W4 + self.lr * dW4
-            self.b4 = self.b4 + self.lr * db4
+            for ind in range(1, len(self.W)):
+                self.W[ind] += self.lr * dW[ind]
+                self.b[ind] += self.lr * dB[ind]
 
     def coss_val(self, cv_data, labels):
-        Z1 = self.W1 * cv_data + self.b1
-        A1 = self.reLU(Z1)
-        Z2 = self.W2 * A1 + self.b2
-        A2 = self.reLU(Z2)
-        Z3 = self.W3 * A2 + self.b3
-        A3 = self.reLU(Z3)
-        Z4 = self.W4 * A3 + self.b4
-        A4 = self.sigmoid(Z4)
-        J = np.sum(labels * np.log(A4) + (1 - labels) * np.log(1 - A4)) / self.m
+        Z = [0]
+        A = [cv_X]
+        for ind in range(1, len(self.W) - 1):
+            z = np.dot(self.W[ind], A[ind - 1]) + self.b[ind]
+            a = self.reLU(z)
+            Z.append(z)
+            A.append(a)
+        # print len(self.W)
+        z_last = self.W[len(self.W) - 1] * A[len(A) - 2] + self.b[len(self.b) - 1]
+        a_last = self.sigmoid(z_last)
+
+        J = - np.sum(np.multiply(labels, np.log(a_last + 1e-10)) + np.multiply((1 - labels),
+                                                                               np.log(1 - a_last + 1e-10))) / self.m
         return J
 
     def pridect (self, test_data):
-        Z1 = self.W1 * test_data + self.b1
-        A1 = self.reLU(Z1)
-        Z2 = self.W2 * A1 + self.b2
-        A2 = self.reLU(Z2)
-        Z3 = self.W3 * A2 + self.b3
-        A3 = self.reLU(Z3)
-        Z4 = self.W4 * A3 + self.b4
-        A4 = self.sigmoid(Z4)
-        return A4
+        Z = [0]
+        A = [test_data]
+        for ind in range(1, len(self.W) - 1):
+            z = np.dot(self.W[ind], A[ind - 1]) + self.b[ind]
+            a = self.reLU(z)
+            Z.append(z)
+            A.append(a)
+        # print len(self.W)
+        z_last = self.W[len(self.W) - 1] * A[len(A) - 2] + self.b[len(self.b) - 1]
+        a_last = self.sigmoid(z_last)
+        return a_last
 
 
 if __name__ == '__main__':
@@ -138,17 +133,17 @@ if __name__ == '__main__':
     data_y = np.array(train_y)
     data_y = data_y.reshape(data_y.shape[0], 1).T
 
-    print data_X.shape, data_y.shape
+    # print data_X.shape, data_y.shape
     m, n = data_X.shape
     n = int(.8 * n)
     train_X = data_X[:, :n]
     train_y = data_y[:, :n]
     cv_X = data_X[:, n:]
     cv_y = data_y[:, n:]
-    clf = myNN(train_X.shape[0], 0.001)
+    clf = myNN(train_X.shape[0], 0.0001)
     clf.train(train_X, train_y, 1000)
     p = clf.pridect(cv_X)
     p[p > .5] = 1
     p[p <= .5] = 0
-    print n, np.sum(p != cv_y)
+    print int(.2 * n), np.sum(p != cv_y)
 
