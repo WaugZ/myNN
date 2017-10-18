@@ -7,12 +7,15 @@ class myNN:
 
     def __init__(self, num_feature, alpha):
         self.lr = alpha
-        self.m = num_feature
-        self.W = [0]  # not use W[0]
-        self.b = [0]  # not use b[0]
+        self.W = [np.zeros((1, 1))]  # not use W[0]
+        self.b = [np.zeros((1, 1))]  # not use b[0]
         ''' Make as many layers as you like '''
-        w = np.random.rand(1, self.m) * .01
+        w = np.random.rand(3, num_feature) * .01
         self.W.append(w)
+        w = np.random.rand(1, 3) * .01
+        self.W.append(w)
+        b = np.zeros((3, 1))
+        self.b.append(b)
         b = np.zeros((1, 1))
         self.b.append(b)
 
@@ -28,16 +31,15 @@ class myNN:
         return A
 
     def train(self, train_data, labels, max_iter):
+        m = train_data.shape[1]
         for i in range(max_iter):
             ''' Forward prop '''
             # print self.W[1].shape, train_data.shape
-            Z = [0]  #  not use Z[0]
-            A = [train_data]
-            for ind in range(len(self.W) - 1):  # the active function of last  layer is different
-                z = np.dot(self.W[ind + 1], A[ind]) + self.b[ind + 1]
-                a = self.reLU(z)
-                A.append(a)
-                Z.append(z)
+            Z = [np.zeros((1, 1))] * len(self.W)  #  not use Z[0]
+            A = [train_data] * len(self.W)
+            for ind in range(1, len(self.W) - 1):  # the active function of last  layer is different
+                Z[ind] = np.dot(self.W[ind], A[ind - 1]) + self.b[ind]
+                A[ind] = self.reLU(Z[ind])
 
             # print self.W[1].shape, A[0].shape
             z_last = np.dot(self.W[len(self.W) - 1], A[len(A) - 2]) + self.b[len(self.b) - 1]
@@ -47,21 +49,23 @@ class myNN:
             A.append(a_last)
 
             '''cost'''
-            J = - np.sum(np.multiply(labels, np.log(a_last + 1e-10)) + np.multiply((1 - labels), np.log(1 - a_last + 1e-10))) / self.m
-            print('Iteration ' + str(i) + ' cost = ' + str(J))
+            J = - np.sum(np.multiply(labels, np.log(a_last + 1e-10)) + np.multiply((1 - labels),
+                                                                                   np.log(1 - a_last + 1e-10))) / m
+            if i % 50 == 0:
+                print('Iteration ' + str(i) + ' cost = ' + str(J))
 
             ''' Backward prop '''
             dZ = [labels - a_last] * len(Z)
-            dW = [0] * len(self.W)
-            dB = [0] * len(self.b)
-            g = [0] * len(Z)
+            dW = [np.zeros((1, 1))] * len(self.W)
+            dB = [np.zeros((1, 1))] * len(self.b)
+            g = [np.zeros((1, 1))] * len(Z)
             for ind in range(len(A) - 1)[::-1]:
                 # print ind
                 if ind < 1:
                     break
                 # print dZ[ind].shape
-                dW[ind] = np.dot(dZ[ind], A[ind - 1].T) / self.m
-                dB[ind] = np.sum(dZ[ind], axis=1) / self.m
+                dW[ind] = np.dot(dZ[ind], A[ind - 1].T) / m
+                dB[ind] = np.sum(dZ[ind], axis=1) / m
                 # print dB[ind].shape
                 g[ind - 1] = np.zeros(A[ind - 1].shape)
                 g[ind - 1][A[ind - 1] != 0] = 1
@@ -74,45 +78,44 @@ class myNN:
                 self.b[ind] += self.lr * dB[ind]
 
     def coss_val(self, cv_data, labels):
-        Z = [0]
-        A = [cv_X]
+        Z = [np.zeros((1, 1))] * len(self.W)
+        A = [cv_data] * len(Z)
+        m = cv_data.shape[1]
         for ind in range(1, len(self.W) - 1):
-            z = np.dot(self.W[ind], A[ind - 1]) + self.b[ind]
-            a = self.reLU(z)
-            Z.append(z)
-            A.append(a)
-        # print len(self.W)
-        z_last = self.W[len(self.W) - 1] * A[len(A) - 2] + self.b[len(self.b) - 1]
+            Z[ind] = np.dot(self.W[ind], A[ind - 1]) + self.b[ind]
+            A[ind] = self.reLU(Z[ind])
+        # print len(self.W), len(A)
+        # print A[0].shape, A[1].shape
+        z_last = np.dot(self.W[len(self.W) - 1], A[len(A) - 2]) + self.b[len(self.b) - 1]
         a_last = self.sigmoid(z_last)
 
         J = - np.sum(np.multiply(labels, np.log(a_last + 1e-10)) + np.multiply((1 - labels),
-                                                                               np.log(1 - a_last + 1e-10))) / self.m
+                                                                               np.log(1 - a_last + 1e-10))) / m
         return J
 
     def pridect (self, test_data):
-        Z = [0]
-        A = [test_data]
+        Z = [np.zeros((1, 1))] * len(self.W)
+        A = [test_data] * len(Z)
         for ind in range(1, len(self.W) - 1):
-            z = np.dot(self.W[ind], A[ind - 1]) + self.b[ind]
-            a = self.reLU(z)
-            Z.append(z)
-            A.append(a)
-        # print len(self.W)
-        z_last = self.W[len(self.W) - 1] * A[len(A) - 2] + self.b[len(self.b) - 1]
+            Z[ind] = np.dot(self.W[ind], A[ind - 1]) + self.b[ind]
+            A[ind] = self.reLU(Z[ind])
+        # print len(self.W), len(A)
+        # print A[0].shape, A[1].shape
+        z_last = np.dot(self.W[len(self.W) - 1], A[len(A) - 2]) + self.b[len(self.b) - 1]
         a_last = self.sigmoid(z_last)
         return a_last
 
 
 if __name__ == '__main__':
     print('loading training data...')
-    file = open('/Users/wangzi/PycharmProjects/test/large_scale/train_data.txt')
+    file = open('/media/wangzi/myData/train_data.txt')
     train_X = []
     train_y = []
     train_row_index = []
     train_col_index = []
     count = 0
 
-    for line in islice(file, 0, 1e4):
+    for line in islice(file, 0, 5e4):
         data_line = str(line).split()
         train_y.append(int(data_line[0]))
         for i in range(1, len(data_line)):
@@ -140,10 +143,11 @@ if __name__ == '__main__':
     train_y = data_y[:, :n]
     cv_X = data_X[:, n:]
     cv_y = data_y[:, n:]
-    clf = myNN(train_X.shape[0], 0.0001)
-    clf.train(train_X, train_y, 1000)
-    p = clf.pridect(cv_X)
+    clf = myNN(train_X.shape[0], 1e-2)
+    clf.train(train_X, train_y, int(5e3))
+    print clf.coss_val(cv_X, cv_y)
+    p = clf.pridect(train_X)
     p[p > .5] = 1
     p[p <= .5] = 0
-    print int(.2 * n), np.sum(p != cv_y)
+    print 'accuracy = ', np.sum(p == train_y) * 100. / int(.8 * n), '%'
 
